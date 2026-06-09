@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  # Contenedor de Base de Datos
+  db:
+    image: mysql:8.0
+    container_name: db_normalizacion
+    environment:
+      MYSQL_ROOT_PASSWORD: hola1938
+      MYSQL_DATABASE: normalizacion_db
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./sql/ddl:/docker-entrypoint-initdb.d 
+    networks:
+      - red_practica
+
+  # Contenedor de Aplicación (Script de Normalización)
+  app:
+    build: .
+    container_name: app_normalizacion
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: hola1938
+      DB_NAME: normalizacion_db
+    volumes:
+      - ./data:/app/data
+      - ./scripts:/app/scripts
+      - ./docs:/app/docs
+    networks:
+      - red_practica
+
+volumes:
+  db_data:
+
+networks:
+  red_practica:
+    driver: bridge
