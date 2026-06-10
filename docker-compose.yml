@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:latest
+    container_name: postgres_practica8
+    environment:
+      - POSTGRES_USER=saul
+      - POSTGRES_PASSWORD=supersecreto
+      - POSTGRES_DB=postgres
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql  # <- CORREGIDO: Sin el "/data" al final
+    networks:
+      - practica8_network
+
+  app:
+    build: .
+    container_name: python_practica8
+    environment:
+      - DB_URL=postgresql+psycopg2://saul:supersecreto@db:5432/postgres
+    volumes:
+      - ./data:/app/data
+      - ./scripts:/app/scripts
+    depends_on:
+      - db
+    networks:
+      - practica8_network
+
+networks:
+  practica8_network:
+    driver: bridge
+
+volumes:
+  pgdata:
