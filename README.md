@@ -5,7 +5,7 @@
   <h2>Instituto Politécnico Nacional</h2>
   <h2>Escuela Superior de Cómputo</h2>
 
-  <br><br>
+  <br>
 
   <b>Práctica 4</b><br>
   <b>Normalización</b>
@@ -33,7 +33,8 @@
   <br>
 </div>
 
----# Práctica de Normalización de Bases de Datos 
+---
+# Práctica de Normalización de Bases de Datos 
 
 Este proyecto implementa un pipeline automatizado para la transformación y normalización de conjuntos de datos planos (CSV) hacia modelos relacionales estructurados en **1FN, 2FN y 3FN**. Todo el flujo de procesamiento, generación de esquemas (DDL) e inserción masiva (DML) se ejecuta de forma programática utilizando Python y contenedores Docker.
 
