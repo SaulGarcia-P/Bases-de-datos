@@ -1,94 +1,100 @@
 import pandas as pd
-import os
-from utils import get_db_connection
+from utils import export_table, create_bridge_table, init_sql_files
 
-def load_raw_data(filepath):
-    print(f"-> Cargando datos desde {filepath}...")
-    df = pd.read_csv(filepath)
-    df.fillna('', inplace=True)
-    return df
+def normalize_netflix():
+    print("Iniciando normalización del Dataset 1 (Netflix)...")
+    
+    # Inicializa y limpia los archivos SQL unificados para este dataset
+    init_sql_files('dataset1')
+    
+    # ---------------------------------------------------------
+    # REQUISITO 1: Lectura de datos originales y validación
+    # ---------------------------------------------------------
+    raw_path = 'data/raw/netflix_titles.csv'
+    try:
+        df = pd.read_csv(raw_path)
+    except FileNotFoundError:
+        print(f"[!] Error: No se encontró el archivo en {raw_path}")
+        return
 
-def extract_entity_table(df, column_name, id_prefix):
-    all_values = df[column_name].str.split(',').explode().str.strip()
-    unique_values = all_values[all_values != ''].unique()
-    df_entity = pd.DataFrame({f'{id_prefix}_name': unique_values})
-    df_entity.insert(0, f'{id_prefix}_id', range(1, 1 + len(df_entity)))
-    return df_entity
+    # ---------------------------------------------------------
+    # REQUISITO 2: Transformaciones a 3FN (Tablas Catálogo)
+    # Extraemos 'type' y 'rating' para evitar redundancias
+    # ---------------------------------------------------------
+    
+    # Catálogo de Tipos (Movie / TV Show)
+    types_df = pd.DataFrame(df['type'].dropna().unique(), columns=['type_name'])
+    types_df['type_id'] = range(1, len(types_df) + 1)
+    
+    # Catálogo de Clasificaciones (Ratings)
+    ratings_df = pd.DataFrame(df['rating'].dropna().unique(), columns=['code'])
+    ratings_df['rating_id'] = range(1, len(ratings_df) + 1)
 
-def create_mapping_table(df, df_entity, df_col_name, entity_name_col, entity_id_col):
-    df_exploded = df[['show_id', df_col_name]].copy()
-    df_exploded[df_col_name] = df_exploded[df_col_name].str.split(', ')
-    df_exploded = df_exploded.explode(df_col_name)
-    df_exploded[df_col_name] = df_exploded[df_col_name].str.strip()
-    df_exploded = df_exploded[df_exploded[df_col_name] != '']
+    # ---------------------------------------------------------
+    # REQUISITO 2: Transformaciones a 1FN/2FN (Multivaluados)
+    # Extraemos actores, directores, países y categorías
+    # ---------------------------------------------------------
     
-    df_mapping = pd.merge(
-        df_exploded, 
-        df_entity, 
-        left_on=df_col_name, 
-        right_on=entity_name_col, 
-        how='inner'
-    )
-    return df_mapping[['show_id', entity_id_col]]
+    def extract_unique_catalog(col_name, new_col_name, id_col_name):
+        """Extrae valores únicos de una columna separada por comas y genera un ID."""
+        all_values = df[col_name].dropna().astype(str).str.split(', ').explode().str.strip()
+        unique_values = all_values.unique()
+        catalog_df = pd.DataFrame(unique_values, columns=[new_col_name])
+        catalog_df[id_col_name] = range(1, len(catalog_df) + 1)
+        return catalog_df
 
-def save_to_outputs(df, table_name, engine, output_dir):
-    """Guarda el DataFrame en PostgreSQL y en un archivo CSV"""
-    print(f"   Guardando tabla '{table_name}'...")
-    
-    # 1. Exportar a PostgreSQL
-    df.to_sql(table_name, engine, if_exists='replace', index=False)
-    
-    # 2. Exportar a CSV en la carpeta normalized
-    csv_path = os.path.join(output_dir, f"{table_name}.csv")
-    df.to_csv(csv_path, index=False)
+    actors_df = extract_unique_catalog('cast', 'full_name', 'actor_id')
+    directors_df = extract_unique_catalog('director', 'full_name', 'director_id')
+    countries_df = extract_unique_catalog('country', 'country_name', 'country_id')
+    categories_df = extract_unique_catalog('listed_in', 'category_name', 'category_id')
 
-if __name__ == '__main__':
-    # 1. Calculamos la ruta absoluta del directorio donde vive este script
-    script_dir = os.path.dirname(os.path.abspath(__file__))
+    # ---------------------------------------------------------
+    # REQUISITO 3: Generación de estructura (Tablas Puente M:N)
+    # ---------------------------------------------------------
+    show_actor_df = create_bridge_table(df, 'show_id', 'cast', actors_df, 'full_name', 'actor_id')
+    show_director_df = create_bridge_table(df, 'show_id', 'director', directors_df, 'full_name', 'director_id')
+    show_country_df = create_bridge_table(df, 'show_id', 'country', countries_df, 'country_name', 'country_id')
+    show_category_df = create_bridge_table(df, 'show_id', 'listed_in', categories_df, 'category_name', 'category_id')
+
+    # ---------------------------------------------------------
+    # PREPARAR LA TABLA PRINCIPAL (shows)
+    # Mapeamos los textos a sus respectivos IDs (Llaves Foráneas)
+    # ---------------------------------------------------------
+    shows_df = df.copy()
     
-    # 2. Construimos las rutas de forma absoluta y a prueba de errores
-    filepath = os.path.abspath(os.path.join(script_dir, '../data/raw/netflix_titles.csv'))
-    output_dir = os.path.abspath(os.path.join(script_dir, '../data/normalized/dataset1'))
+    # Reemplazar texto por IDs (3FN)
+    shows_df = shows_df.merge(types_df, left_on='type', right_on='type_name', how='left')
+    shows_df = shows_df.merge(ratings_df, left_on='rating', right_on='code', how='left')
     
-    # Crear directorio si no existe
-    os.makedirs(output_dir, exist_ok=True)
+    # Seleccionar solo las columnas finales para la tabla shows
+    shows_final = shows_df[[
+        'show_id', 'type_id', 'title', 'release_year', 
+        'rating_id', 'duration', 'description', 'date_added'
+    ]]
+
+    # ---------------------------------------------------------
+    # REQUISITO 4: Exportación de resultados
+    # ---------------------------------------------------------
+    folder = 'dataset1'
     
-    df_raw = load_raw_data(filepath)
-    engine = get_db_connection()
+    # Exportar Catálogos
+    export_table(types_df, 'show_types', folder)
+    export_table(ratings_df, 'ratings', folder)
+    export_table(actors_df, 'actors', folder)
+    export_table(directors_df, 'directors', folder)
+    export_table(countries_df, 'countries', folder)
+    export_table(categories_df, 'categories', folder)
     
-    print("\n--- Iniciando Normalización a 3FN ---")
+    # Exportar Tablas Puente
+    export_table(show_actor_df, 'show_actor', folder)
+    export_table(show_director_df, 'show_director', folder)
+    export_table(show_country_df, 'show_country', folder)
+    export_table(show_category_df, 'show_category', folder)
     
-    # 1. Extraer entidades independientes (Diccionarios)
-    df_genres = extract_entity_table(df_raw, 'listed_in', 'genre')
-    df_directors = extract_entity_table(df_raw, 'director', 'director')
-    df_actors = extract_entity_table(df_raw, 'cast', 'actor')
-    df_countries = extract_entity_table(df_raw, 'country', 'country')
-    
-    # 2. Crear tablas intermedias (Mappings)
-    df_show_genres = create_mapping_table(df_raw, df_genres, 'listed_in', 'genre_name', 'genre_id')
-    df_show_directors = create_mapping_table(df_raw, df_directors, 'director', 'director_name', 'director_id')
-    df_show_actors = create_mapping_table(df_raw, df_actors, 'cast', 'actor_name', 'actor_id')
-    df_show_countries = create_mapping_table(df_raw, df_countries, 'country', 'country_name', 'country_id')
-    
-    # 3. Crear Tabla Principal (Shows) limpia
-    columnas_multivaluadas = ['director', 'cast', 'country', 'listed_in']
-    df_shows = df_raw.drop(columns=columnas_multivaluadas)
-    
-    print("\n--- Exportando a PostgreSQL y CSV ---")
-    
-    # Guardar Entidades
-    save_to_outputs(df_genres, 'genres', engine, output_dir)
-    save_to_outputs(df_directors, 'directors', engine, output_dir)
-    save_to_outputs(df_actors, 'actors', engine, output_dir)
-    save_to_outputs(df_countries, 'countries', engine, output_dir)
-    
-    # Guardar Principal
-    save_to_outputs(df_shows, 'shows', engine, output_dir)
-    
-    # Guardar Relaciones
-    save_to_outputs(df_show_genres, 'show_genres', engine, output_dir)
-    save_to_outputs(df_show_directors, 'show_directors', engine, output_dir)
-    save_to_outputs(df_show_actors, 'show_actors', engine, output_dir)
-    save_to_outputs(df_show_countries, 'show_countries', engine, output_dir)
-    
-    print("\n¡Proceso del Dataset 1 completado con éxito!")
+    # Exportar Tabla Principal
+    export_table(shows_final, 'shows', folder)
+
+    print("--- Proceso Dataset 1 finalizado exitosamente ---")
+
+if __name__ == "__main__":
+    normalize_netflix()

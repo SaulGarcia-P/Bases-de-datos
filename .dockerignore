@@ -1,0 +1,20 @@
+# Entornos locales (¡Crucial bloquearlos para Docker!)
+venv/
+.venv/
+env/
+
+# Caché compilada de tu Mac
+__pycache__/
+*.pyc
+*.pyo
+
+# Archivos de Git y del editor
+.git/
+.vscode/
+.DS_Store
+
+# Evitamos copiar los resultados locales (Docker generará los suyos)
+sql/ddl/*.sql
+sql/dml/*.sql
+normalized/
+data/normalized/

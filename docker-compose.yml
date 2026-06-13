@@ -1,35 +1,43 @@
 services:
+  # Contenedor de Base de Datos
   db:
-    image: postgres:latest
-    container_name: postgres_practica8
+    image: mysql:8.0
+    container_name: db_normalizacion
     environment:
-      - POSTGRES_USER=saul
-      - POSTGRES_PASSWORD=supersecreto
-      - POSTGRES_DB=postgres
-      - POSTGRES_HOST_AUTH_METHOD=trust
+      MYSQL_ROOT_PASSWORD: hola1938
+      MYSQL_DATABASE: normalizacion_db
     ports:
-      - "5433:5432"
+      - "3307:3306"
     volumes:
-      - pgdata:/var/lib/postgresql  # <- CORREGIDO: Sin el "/data" al final
+      - db_data:/var/lib/mysql
+      - ./sql/ddl:/docker-entrypoint-initdb.d 
     networks:
-      - practica8_network
+      - red_practica
 
+  # Contenedor de Aplicación (Script de Normalización)
   app:
     build: .
-    container_name: python_practica8
+    container_name: app_normalizacion
+    depends_on:
+      - db
     environment:
-      - DB_URL=postgresql+psycopg2://saul:supersecreto@db:5432/postgres
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: hola1938
+      DB_NAME: normalizacion_db
     volumes:
       - ./data:/app/data
       - ./scripts:/app/scripts
-    depends_on:
-      - db
+      - ./docs:/app/docs
+      - ./sql:/app/sql 
+      - ./normalized:/app/normalized
     networks:
-      - practica8_network
-
-networks:
-  practica8_network:
-    driver: bridge
+      - red_practica
 
 volumes:
-  pgdata:
+  db_data:
+
+networks:
+  red_practica:
+    driver: bridge

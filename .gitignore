@@ -1,7 +1,25 @@
-cat << EOF > .gitignore
+# Entornos Virtuales
 venv/
+.venv/
+env/
+
+# Caché de Python
 __pycache__/
-*.pyc
-.pytest_cache/
+*.py[cod]
+
+# Archivos del Sistema Operativo y Editor
 .DS_Store
-EOF
+.vscode/
+
+# Bases de datos locales
+*.sqlite3
+*.db
+
+# ==========================================
+# Datos y Archivos Generados
+# ==========================================
+# Ignorar todos los CSVs generados por el código
+normalized/
+
+# (Descomenta la siguiente línea si tampoco quieres subir los originales)
+# data/raw/*.csv
