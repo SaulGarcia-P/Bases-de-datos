@@ -161,10 +161,11 @@ El esquema relacional final queda compuesto por 12 tablas fuertemente tipadas y 
 10. `categories`
 11. `show_category`
 
+<img width="2625" height="2754" alt="d11" src="https://github.com/user-attachments/assets/2beea8c4-df68-497b-9a43-800586242c3f" />
 **Figura 1.1** 1F.
-
+<img width="4000" height="1004" alt="d12" src="https://github.com/user-attachments/assets/ccdfec84-4c10-4625-95c9-4dd6495093d6" />
 **Figura 1.2** 2F.
-
+<img width="7344" height="1729" alt="d13" src="https://github.com/user-attachments/assets/34d3e54a-ec4b-4a25-8a94-c37da817fbe1" />
 **Figura 1.3** 3F
 
 
@@ -344,10 +345,13 @@ El esquema relacional final queda compuesto por 4 tablas altamente eficientes y 
 3. `invoices`
 4. `invoice_details`
 
+<img width="4850" height="579" alt="d21" src="https://github.com/user-attachments/assets/62238ef6-ce63-435d-a48f-4260bb3a63c0" />
 **Figura 2.1** 1F.
 
+<img width="6407" height="1308" alt="d22" src="https://github.com/user-attachments/assets/c9b06e45-28b3-4f85-ba67-a100dbb93911" />
 **Figura 2.2** 2F.
 
+<img width="6085" height="2033" alt="d23" src="https://github.com/user-attachments/assets/65ffd9e8-6fb6-437c-b797-00bc41e918d6" />
 **Figura 2.3** 3F.
 
 
@@ -451,14 +455,6 @@ Para resolver esto y lograr un modelo relacional robusto, separamos la entidad i
 * **Tabla Principal Transaccional (Encuentros):**
 * `encounters` (`encounter_id` PK, `patient_id` FK, `hospital_id`, `icu_id`, `icu_type`, `icu_stay_type`, `bmi`, `weight`, métricas clínicas)
 
-#### Diagramas entidad-relación
-
-**Figura 3.1** 1F
-**Figura 3.2** 2F
-**Figura 3.3** 3F
-
-####
-
 #### Ejemplos de datos transformados
 
 **Antes (Estructura en 1FN con demografía repetitiva):**
@@ -500,9 +496,7 @@ Al iniciar esta fase, nuestra base de datos cuenta con el catálogo de pacientes
 
 La 3FN exige que la base de datos esté en 2FN y que se eliminen las dependencias transitivas .
 
-* 
-**Problema:** En la tabla `encounters`, los atributos `icu_type` (tipo de UCI) y `icu_stay_type` no describen directamente al encuentro clínico (`encounter_id`), sino que describen a la Unidad de Cuidados Intensivos (`icu_id`) .
-
+* **Problema:** En la tabla `encounters`, los atributos `icu_type` (tipo de UCI) y `icu_stay_type` no describen directamente al encuentro clínico (`encounter_id`), sino que describen a la Unidad de Cuidados Intensivos (`icu_id`) .
 
 * **Anomalía:** Esto es una cadena de dependencia (`encounter_id` $\rightarrow$ `icu_id` $\rightarrow$ `icu_type`). Si el hospital reclasifica una UCI de "Med-Surg" a "CTICU", se tendrían que actualizar miles de registros históricos de encuentros para reflejar el cambio en esa sala específica.
 
@@ -513,7 +507,7 @@ Para resolver esto, extraemos los atributos de la infraestructura hospitalaria a
 * Se crean las tablas `hospitals` e `icus`.
 * La tabla `encounters` se actualiza para almacenar únicamente `hospital_id` e `icu_id` como claves foráneas, eliminando las columnas descriptivas de texto.
 
-#### 4. Modelo relacional completo con todas las tablas
+#### Modelo relacional completo con todas las tablas
 
 El esquema relacional final queda compuesto por 4 tablas transaccionales y de catálogo:
 
@@ -521,8 +515,15 @@ El esquema relacional final queda compuesto por 4 tablas transaccionales y de ca
 2. `hospitals`
 3. `icus`
 4. `encounters`
+   
+<img width="5431" height="579" alt="d31" src="https://github.com/user-attachments/assets/9c6e1532-5af4-4d29-86ed-71300bdccbfb" />
+**Figura 3.1** 1F
 
-**Figura 3.2** Diagrama.
+<img width="4441" height="1308" alt="d32" src="https://github.com/user-attachments/assets/f7b40201-713d-4ce1-944a-0b3976b9bf92" />
+**Figura 3.2** 2F
+
+<img width="6558" height="1308" alt="d33" src="https://github.com/user-attachments/assets/81f5dd4d-2d40-49ba-9385-a3e4b6881bfa" />
+**Figura 3.3** 3F
 
 #### Diccionario de datos de cada tabla
 
