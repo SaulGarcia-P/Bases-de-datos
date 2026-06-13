@@ -12,7 +12,8 @@
 
   <br>
 
-  <b>Alumno:</b><br>
+  <b>Alumnos:</b><br>
+  Garcia Peñalva Saúl
   Olate Tomás Kevin Saúl
 
   <br>
