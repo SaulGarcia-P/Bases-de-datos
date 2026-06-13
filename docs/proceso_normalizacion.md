@@ -562,7 +562,7 @@ Así lucen los datos interactuando sin redundancia de infraestructura:
 | --- | --- | --- | --- | --- |
 | 66154 | 25312 | 92 | 119.0 | 0 |
 | 114252 | 59342 | 90 | 118.0 | 0 |
-
+docker compose up --build -d
 ---
 
 ### Cuadros Comparativos de Normalización
